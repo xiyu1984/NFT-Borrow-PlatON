@@ -52,12 +52,6 @@ public:
     /// @returns time up block_height
     CONST uint64_t getLeasingPeriod(const std::string& token_id);
 
-private:
-    void transfer_usage_without_check(const std::string& from, const std::string& to, const std::string& token_id);
-
-    void transfer_ownership_without_check(const std::string& from, const std::string& to, const std::string& token_id);
-
-public:
     //////////////////////////////////////////////////////////////////////////////////////////// Derived from ERC-721
     /// @dev This emits when ownership of any NFT changes by any mechanism.
     ///  This event emits when NFTs are created (`from` == 0) and destroyed
@@ -170,6 +164,11 @@ public:
     ///  3986. The URI may point to a JSON file that conforms to the "ERC721
     ///  Metadata JSON Schema".
     CONST std::string tokenURI(const std::string& _tokenId); 
+
+private:
+    void transfer_usage_without_check(const std::string& from, const std::string& to, const std::string& token_id);
+
+    void transfer_ownership_without_check(const std::string& from, const std::string& to, const std::string& token_id);
 
 private:
     platon::StorageType<"Owner"_n, std::pair<platon::Address, bool>>    owner_id;
