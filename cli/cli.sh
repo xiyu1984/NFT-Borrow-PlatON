@@ -1,1 +1,1 @@
-platon-truffle deploy --wasm --contract-name nft666
+platon-truffle deploy --wasm --contract-name NFT666
