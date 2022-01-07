@@ -39,18 +39,18 @@ public:
     /// @param to The address of the next user
     /// @param token_id The ID of the token
     /// @param period The rental period of the leasing. The owner can `get_usage_back` after `env::block_height() + period`
-    ACTION void lend_usage_to(const std::string& to, const std::string& token_id, uint64_t period);
+    ACTION void lendUsageTo(const std::string& to, const std::string& token_id, uint64_t period);
 
     /// @notice The borrower returns the token to the owner, the `predecessor_account_id` must be the token user.
     /// @dev 
     /// @param token_id The ID of the token
-    ACTION void usage_return(const std::string& token_id);
+    ACTION void usageReturn(const std::string& token_id);
 
     /// @notice Get the leasing period of token_id.
     /// @dev 
     /// @param token_id The ID of the token
     /// @returns time up block_height
-    CONST uint64_t get_leasing_period(const std::string& token_id);
+    CONST uint64_t getLeasingPeriod(const std::string& token_id);
 
 private:
     void transfer_usage_without_check(const std::string& from, const std::string& to, const std::string& token_id);
@@ -179,7 +179,7 @@ private:
 };
 
 PLATON_DISPATCH(NFT666, (init)
-(lend_usage_to)(usage_return)(get_leasing_period)
+(lendUsageTo)(usageReturn)(getLeasingPeriod)
 (balanceOf)(ownerOf)
 (safeTransferFromWithData)(safeTransferFrom)
 (transferFrom)(approve)(setApprovalForAll)(getApproved)(isApprovedForAll)
