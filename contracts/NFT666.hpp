@@ -2,6 +2,15 @@
 
 #include "nft_666_token.hpp"
 
+#include <set>
+
+struct AssetRights{
+    platon::Address ownership;
+    platon::Address usage_rights;
+
+    PLATON_SERIALIZE(AssetRights, (ownership)(usage_rights))
+};
+
 struct EventTransfer{
     std::string     from;
     std::string     to;
@@ -175,6 +184,30 @@ private:
     platon::StorageType<"total"_n, uint64_t>                            total_supply;
     platon::StorageType<"Contract"_n, ContractMetaData>                 contract_meta;
     
+    // token management
+    // <TokenID, ...>
+    platon::db::Map<"ownermap"_n, std::string, AssetRights>                         owner_ship;
+    // owner_ship: LookupMap<String, AssetRights>,
+
+    // <ownership, ..<TokenID>>
+    platon::db::Map<"a-own"_n, platon::Address, std::set<std::string>>       assets_own_info;
+    // assets_own_info: LookupMap<AccountId, UnorderedSet<String>>,
+
+    // <usage, ..<TokenID>>
+    platon::db::Map<"a-usage"_n, platon::Address, std::set<std::string>>     assets_usage_info;
+    // assets_usage_info: LookupMap<AccountId, UnorderedSet<String>>,
+
+        // <TokenID, metadata>
+    tokens: LookupMap<String, metadata::TokenMetaData>,
+
+    // <TokenID, ..>
+    approvals: LookupMap<String, AccountId>,
+
+    // <TokenID, ..>
+    usage_approvals: LookupMap<String, AccountId>,
+
+    // <TokenID, u64(the time up block_height)>
+    leasing_period: LookupMap<String, u64>,
 };
 
 PLATON_DISPATCH(NFT666, (init)
