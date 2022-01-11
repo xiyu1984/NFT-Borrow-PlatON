@@ -198,16 +198,20 @@ private:
     // assets_usage_info: LookupMap<AccountId, UnorderedSet<String>>,
 
         // <TokenID, metadata>
-    tokens: LookupMap<String, metadata::TokenMetaData>,
+    platon::db::Map<"tokens"_n, std::string, TokenMetaData>                 tokens;
+    // tokens: LookupMap<String, metadata::TokenMetaData>,
 
     // <TokenID, ..>
-    approvals: LookupMap<String, AccountId>,
+    platon::db::Map<"approvals"_n, std::string, platon::Address>            approvals;
+    // approvals: LookupMap<String, AccountId>,
 
     // <TokenID, ..>
-    usage_approvals: LookupMap<String, AccountId>,
+    platon::db::Map<"usage_apv"_n, std::string, platon::Address>            usage_approvals;
+    // usage_approvals: LookupMap<String, AccountId>,
 
     // <TokenID, u64(the time up block_height)>
-    leasing_period: LookupMap<String, u64>,
+    platon::db::Map<"leasing_prd"_n, std::string, uint64_t>                 leasing_period;
+    // leasing_period: LookupMap<String, u64>,
 };
 
 PLATON_DISPATCH(NFT666, (init)
