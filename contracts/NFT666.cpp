@@ -1,6 +1,12 @@
 #include "NFT666.hpp"
 #include <platon/panic.hpp>
 
+void contract_throw(const std::string& msg)
+{
+    ::platon_debug((const unsigned char*)msg.c_str(), msg.size());
+    ::platon_revert();
+}
+
 void NFT666::init()
 {
 
@@ -11,24 +17,24 @@ void NFT666::lendUsageTo(const std::string& to, const std::string& token_id, uin
     auto toAddress = platon::make_address(to);
     if (!toAddress.second)
     {
-        platon::internal::platon_throw("Invalid `to` account!");
+        contract_throw("Invalid `to` account!");
     }
     
     platon::Address pre_account = platon::platon_caller();
 
     if (!owner_ship.contains(token_id))
     {
-        platon::internal::platon_throw("token does not exist!");
+        contract_throw("token does not exist!");
     }
     auto art = &owner_ship[token_id];
     if (!((art->ownership == pre_account) && (art->usage_rights == pre_account)))
     {
-        platon::internal::platon_throw("Lend Unauthorized!");
+        contract_throw("Lend Unauthorized!");
     }
     
     if (!assets_usage_info.contains(art->usage_rights))
     {
-         platon::internal::platon_throw("There's a bug, because someone has the usage_right, but the asset does not existed in the asset_usage_info table!");
+         contract_throw("There's a bug, because someone has the usage_right, but the asset does not existed in the asset_usage_info table!");
     }
     auto cur_usage_tokens = &assets_usage_info[art->usage_rights];
     // delete from current usage
@@ -49,7 +55,54 @@ void NFT666::lendUsageTo(const std::string& to, const std::string& token_id, uin
 
 void NFT666::usageReturn(const std::string& token_id)
 {
+    auto pre_account = platon::platon_caller();
 
+    if (!owner_ship.contains(token_id))
+    {
+        contract_throw("token does not exist!");
+    }
+    auto art = &owner_ship[token_id];
+    
+    if (pre_account != art->usage_rights)
+    {
+        if (pre_account != art->ownership)
+        {
+            contract_throw("Return Unauthorized!");
+        }
+        else{
+            if (!leasing_period.contains(token_id))
+            {
+                contract_throw("No leasing record!");
+            }
+            auto token_lease_period = leasing_period[token_id];
+            if (::platon_block_number() <= token_lease_period)
+            {
+                contract_throw("Return Unauthorized. Not time up!");
+            }
+        }
+    }
+    
+    // let mut cur_usage_tokens = self.assets_usage_info.get(&art.usage_rights).expect("There's a bug, because someone has the usage_right, but the asset does not existed in the asset_usage_info table!");
+    if (!assets_usage_info.contains(art->usage_rights))
+    {
+        contract_throw("There's a bug, because someone has the usage_right, but the asset does not existed in the asset_usage_info table!");
+    }
+    auto cur_usage_tokens = &assets_usage_info[art->usage_rights];
+
+    // delete from current usage
+    cur_usage_tokens->erase(token_id);
+
+    // add into new usage
+    assets_usage_info[art->ownership].insert(token_id);
+
+    // change usage_rights
+    art->usage_rights = art->ownership;
+
+    // delete from approved
+    usage_approvals.erase(token_id);
+
+    // add leasing record
+    leasing_period.erase(token_id);
 }
 
 uint64_t NFT666::getLeasingPeriod(const std::string& token_id)
