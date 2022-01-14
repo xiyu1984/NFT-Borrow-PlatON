@@ -117,7 +117,13 @@ uint64_t NFT666::getLeasingPeriod(const std::string& token_id)
 
 platon::u128 NFT666::balanceOf(const std::string& _owner)
 {
-    return platon::u128(0);
+    auto account = platon::make_address(_owner);
+    if (!account.second)
+    {
+        contract_throw("None of the account!");
+    }
+    
+    return assets_own_info[account.first].size();
 }
 
 std::string NFT666::ownerOf(const std::string& _tokenId)
