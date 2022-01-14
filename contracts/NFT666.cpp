@@ -128,17 +128,36 @@ platon::u128 NFT666::balanceOf(const std::string& _owner)
 
 std::string NFT666::ownerOf(const std::string& _tokenId)
 {
-    return std::string("");
+    if (!owner_ship.contains(_tokenId))
+    {
+        contract_throw("The _tokenId dose not exist!");
+    }
+    
+    return owner_ship[_tokenId].ownership.toString();
 }
 
 void NFT666::safeTransferFromWithData(const std::string& _from, const std::string& _to, const std::string& _tokenId, platon::bytes data)
 {
+    // self.transferFrom(from.clone(), to.clone(), token_id.clone());
+    transferFrom(_from, _to, _tokenId);
 
+    // cross contract call
+    auto toAddress = platon::make_address(_to);
+    if (!toAddress.second)
+    {
+        contract_throw("Invalid `_to` address!");
+    }
+    
+    auto result = platon::platon_call(toAddress.first, (unsigned int)(0), (unsigned int)(0), "onERC721Received", 
+                                                                                        platon::platon_caller().toString(),
+                                                                                        _from,
+                                                                                        _tokenId, 
+                                                                                        data);
 }
 
 void NFT666::safeTransferFrom(const std::string& _from, const std::string& _to, const std::string& _tokenId)
 {
-
+    safeTransferFromWithData(_from, _to, _tokenId, platon::asBytes(""));
 }
 
 void NFT666::transferFrom(const std::string& _from, const std::string& _to, const std::string& _tokenId)
