@@ -162,32 +162,171 @@ void NFT666::safeTransferFrom(const std::string& _from, const std::string& _to, 
 
 void NFT666::transferFrom(const std::string& _from, const std::string& _to, const std::string& _tokenId)
 {
+    auto toAddress = platon::make_address(_to);
+    if (!toAddress.second)
+    {
+        contract_throw("Invalid `to` address!");
+    }
+    
 
+    if (!owner_ship.contains(_to))
+    {
+        contract_throw("`token_id` not exist!");
+    }
+    auto art = &owner_ship[_to];
+    
+    // token without approves
+
+    // the owner of the token must be the same as `from`
+    if (_from != art->ownership.toString())
+    {
+        contract_throw("Ownership Unauthorized!");
+    }
+
+    // if in ownership, the `from` must be the same as the `predecessor_account_id`
+    // if not, the `predecessor_account_id` must be in the `self.approvals` of the token
+    auto pre_account = platon::platon_caller();
+
+    if (pre_account != art->ownership)
+    {
+        if (!approvals.contains(_tokenId))
+        {
+            contract_throw("Caller Ownership Unauthorized: 1");
+        }
+
+        if (approvals[_tokenId] != pre_account)
+        {
+            contract_throw("Caller Ownership Unauthorized: 2");
+        }
+    }
+    
+    // process leasing first
+    if (!leasing_period.contains(_tokenId))
+    {
+        if (art->ownership != art->usage_rights)
+        {
+            contract_throw("Usage Unauthorized: if there's no leasing, the `ownership` must be the same as `usage_rights`");
+        }
+        
+        transfer_usage_without_check(_from, _to, _tokenId);
+    }
+    
+    transfer_ownership_without_check(_from, _to, _tokenId);
 }
 
 void NFT666::approve(const std::string& _approved, const std::string& _tokenId)
 {
+    auto apvAddress = platon::make_address(_approved);
+    if (!apvAddress.second)
+    {
+        contract_throw("Invalide `_approved` address!");
+    }
+    
+    if (!owner_ship.contains(_tokenId))
+    {
+        contract_throw("Token does not exist!");
+    }
+    auto owner = owner_ship[_tokenId];
 
+    if (platon::platon_caller() != owner.ownership)
+    {
+        contract_throw("Ownership Unauthorized");
+    }
+    
+    approvals[_tokenId] = apvAddress.first;
 }
 
 void NFT666::setApprovalForAll(const std::string& _operator, bool _approved)
 {
-
+    auto pre_account = platon::platon_caller();
+    auto oper = platon::make_address(_operator);
+    if (!oper.second)
+    {
+        contract_throw("invalid `_operator`");
+    }
+    
+    if (pre_account == oper.first)
+    {
+        return;
+    }
+    
+    if (!assets_own_info.contains(pre_account))
+    {
+        contract_throw("None of assets!");
+    }
+    auto assets_owned = &assets_own_info[pre_account];
+    
+    if (_approved)
+    {
+        for (auto itr = assets_owned->begin(); itr != assets_owned->end(); ++itr)
+        {
+            approvals[*itr] = oper.first;
+        }
+    }
+    else{
+        for (auto itr = assets_owned->begin(); itr != assets_owned->end(); ++itr)
+        {
+            approvals.erase(*itr);
+        }
+    }
 }
 
 std::string NFT666::getApproved(const std::string& _tokenId)
 {
-    return std::string("");
+    if (!approvals.contains(_tokenId))
+    {
+        contract_throw("`_tokenId` does not exist!");
+    }
+    
+    return approvals[_tokenId].toString();
 }
 
 bool NFT666::isApprovedForAll(const std::string& _owner, const std::string& _operator)
 {
+    // let assets_owned = self.assets_own_info.get(&owner).expect("None of assets!");
+    auto ownerAddress = platon::make_address(_owner);
+    if (!ownerAddress.second)
+    {
+        return false;
+    }
+    
+    if (!assets_own_info.contains(ownerAddress.first))
+    {
+        contract_throw("None of assets!");
+    }
+    auto assets_owned = assets_own_info[ownerAddress.first];
+    
+
+    // for token in assets_owned.iter(){
+    //     let approved_opt = self.approvals.get(&token);
+    //     if let Some(approved) = approved_opt {
+    //         if approved != operator{
+    //             return false;
+    //         }
+    //     }else{
+    //         return false;
+    //     }
+    // }
+
+    for (auto itr = assets_owned.begin(); itr != assets_owned.end(); ++itr)
+    {
+        if (!approvals.contains(*itr))
+        {
+            return false;
+        }
+        
+        if (approvals[*itr].toString() != _operator)
+        {
+            return false;
+        }
+    }
+    
     return true;
 }
 
 uint64_t NFT666::totalSupply()
 {
-    return uint64_t(0);
+    return total_supply.self();
 }
 
 std::string NFT666::name()
@@ -202,7 +341,18 @@ std::string NFT666::symbol()
 
 std::string NFT666::tokenURI(const std::string& _tokenId)
 {
-    return std::string("");
+    if (!tokens.contains(_tokenId))
+    {
+        contract_throw("None of the token_id");
+    }
+    auto v = tokens[_tokenId];
+    if (v.media.empty())
+    {
+        return "";
+    }
+    else{
+        return v.media[0];
+    }
 }
 
 void NFT666::transfer_usage_without_check(const std::string& from, const std::string& to, const std::string& token_id)
@@ -213,4 +363,9 @@ void NFT666::transfer_usage_without_check(const std::string& from, const std::st
 void NFT666::transfer_ownership_without_check(const std::string& from, const std::string& to, const std::string& token_id)
 {
     
+}
+
+NFT666Token NFT666::mint(AssetRights asset_rights, TokenMetaData token_metadata)
+{
+    return NFT666Token();
 }

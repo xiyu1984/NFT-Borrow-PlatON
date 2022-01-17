@@ -174,6 +174,10 @@ public:
     ///  Metadata JSON Schema".
     CONST std::string tokenURI(const std::string& _tokenId); 
 
+    //////////////////////////////////////////////////////////////////////////////////////////// Derived from ERC721Metadata
+    // mint and burn
+    ACTION NFT666Token mint(AssetRights asset_rights, TokenMetaData token_metadata);
+
 private:
     void transfer_usage_without_check(const std::string& from, const std::string& to, const std::string& token_id);
 
