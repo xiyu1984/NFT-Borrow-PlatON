@@ -357,7 +357,29 @@ std::string NFT666::tokenURI(const std::string& _tokenId)
 
 void NFT666::transfer_usage_without_check(const std::string& from, const std::string& to, const std::string& token_id)
 {
+    let mut asset_right = self.owner_ship.get(&token_id).expect("token dose not exist!");
 
+    let mut cur_usage_tokens = self.assets_usage_info.get(&from).expect("There's a bug, because someone has the usage_right, but the asset does not existed in the asset_usage_info table!");
+
+    // delete from current usage
+    cur_usage_tokens.remove(&token_id);
+    self.assets_usage_info.insert(&from, &cur_usage_tokens);
+
+    // add into new usage
+    let mut new_usage_tokens = self.assets_usage_info.get(&to).unwrap_or_else(||{
+        UnorderedSet::new(StorageRecord::AssetsUsageTable{
+            account_hash: env::sha256(to.as_bytes()),
+        })
+    });
+    new_usage_tokens.insert(&token_id);
+    self.assets_usage_info.insert(&to, &new_usage_tokens);
+
+    // change usage_rights
+    asset_right.usage_rights = to;
+    self.owner_ship.insert(&token_id, &asset_right);
+
+    // delete from approved
+    self.usage_approvals.remove(&token_id);
 }
 
 void NFT666::transfer_ownership_without_check(const std::string& from, const std::string& to, const std::string& token_id)
