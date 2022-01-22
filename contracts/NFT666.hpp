@@ -67,17 +67,17 @@ public:
     ///  (`to` == 0). Exception: during contract creation, any number of NFTs
     ///  may be created and assigned without emitting Transfer. At the time of
     ///  any transfer, the approved address for that NFT (if any) is reset to none.
-    PLATON_EVENT1(TransferEvent, std::string, EventTransfer);
+    PLATON_EVENT0(TransferEvent, EventTransfer);
 
     /// @dev This emits when the approved address for an NFT is changed or
     ///  reaffirmed. The zero address indicates there is no approved address.
     ///  When a Transfer event emits, this also indicates that the approved
     ///  address for that NFT (if any) is reset to none.
-    PLATON_EVENT1(ApprovalEvent, std::string, EventApproval);
+    PLATON_EVENT0(ApprovalEvent, EventApproval);
 
     /// @dev This emits when an operator is enabled or disabled for an owner.
     ///  The operator can manage all NFTs of the owner.
-    PLATON_EVENT1(ApprovalForAllEvent, std::string, EventApprovalForAll);
+    PLATON_EVENT0(ApprovalForAllEvent, EventApprovalForAll);
 
     /// @notice Count all NFTs assigned to an owner
     /// @dev NFTs assigned to the zero address are considered invalid, and this

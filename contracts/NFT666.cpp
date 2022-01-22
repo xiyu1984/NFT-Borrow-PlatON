@@ -9,7 +9,7 @@ void contract_throw(const std::string& msg)
 
 void NFT666::init()
 {
-
+    owner_id.self() = std::pair<platon::Address, bool>(platon::platon_caller(), true);
 }
 
 void NFT666::lendUsageTo(const std::string& to, const std::string& token_id, uint64_t period)
@@ -212,6 +212,12 @@ void NFT666::transferFrom(const std::string& _from, const std::string& _to, cons
     }
     
     transfer_ownership_without_check(_from, _to, _tokenId);
+
+    EventTransfer etf;
+    etf.from = _from;
+    etf.to = _to;
+    etf.tokenId = _tokenId;
+    PLATON_EMIT_EVENT0(TransferEvent, etf);
 }
 
 void NFT666::approve(const std::string& _approved, const std::string& _tokenId)
@@ -234,6 +240,12 @@ void NFT666::approve(const std::string& _approved, const std::string& _tokenId)
     }
     
     approvals[_tokenId] = apvAddress.first;
+
+    EventApproval ea;
+    ea.approved = _approved;
+    ea.owner = owner.ownership.toString();
+    ea.tokenId = _tokenId;
+    PLATON_EMIT_EVENT0(ApprovalEvent, ea);
 }
 
 void NFT666::setApprovalForAll(const std::string& _operator, bool _approved)
@@ -269,6 +281,12 @@ void NFT666::setApprovalForAll(const std::string& _operator, bool _approved)
             approvals.erase(*itr);
         }
     }
+
+    EventApprovalForAll eaa;
+    eaa.approved = _approved;
+    eaa.owner = pre_account.toString();
+    eaa._operator = _operator;
+    PLATON_EMIT_EVENT0(ApprovalForAllEvent, eaa);
 }
 
 std::string NFT666::getApproved(const std::string& _tokenId)
@@ -426,60 +444,94 @@ void NFT666::transfer_ownership_without_check(const std::string& from, const std
 
 NFT666Token NFT666::mint(AssetRights asset_rights, TokenMetaData token_metadata)
 {
-    assert_eq!(env::predecessor_account_id(), self.owner_id, "Unauthorized");
-
-    if !env::is_valid_account_id(asset_rights.ownership.as_bytes()){
-        env::panic_str("invalid owner account!");
+    // assert_eq!(env::predecessor_account_id(), self.owner_id, "Unauthorized");
+    if (platon::platon_caller() != owner_id.self().first)
+    {
+        contract_throw("Unauthorized");
     }
+    
+    // if !env::is_valid_account_id(asset_rights.ownership.as_bytes()){
+    //     env::panic_str("invalid owner account!");
+    // }
 
-    if !env::is_valid_account_id(asset_rights.usage_rights.as_bytes()){
-        env::panic_str("invalid usage account!");
+    // if !env::is_valid_account_id(asset_rights.usage_rights.as_bytes()){
+    //     env::panic_str("invalid usage account!");
+    // }
+
+    // assert_eq!(asset_rights.ownership , asset_rights.usage_rights, "the `ownership` must be the same as `usage_rights` in `mint`");
+    if (asset_rights.ownership != asset_rights.usage_rights)
+    {
+        contract_throw("the `ownership` must be the same as `usage_rights` in `mint`");
     }
-
-    assert_eq!(asset_rights.ownership , asset_rights.usage_rights, "the `ownership` must be the same as `usage_rights` in `mint`");
-
-    self.total_supply += 1;
+    
+    total_supply.self() += 1;
 
     // create the unique token_id
-    let token_id: String = token_metadata.to_hex_string();
-    let token_id = token_id + env::current_account_id().as_str();
-    let token_id = format!("{}+{}", token_id, self.total_supply);
-    let token_id = hex::encode(env::sha256(token_id.as_bytes()));
+    // let token_id: String = token_metadata.to_hex_string();
+    // let token_id = token_id + env::current_account_id().as_str();
+    // let token_id = format!("{}+{}", token_id, self.total_supply);
+    // let token_id = hex::encode(env::sha256(token_id.as_bytes()));
+    std::string token_id = token_metadata.to_hex_string();
+    token_id += platon::platon_caller().toString();
+    token_id += std::to_string(total_supply);
+    platon::bytes token_id_bytes = platon::asBytes(token_id);
+
+    token_id = platon::platon_sha3(token_id_bytes).toString();
+
 
     // the token_id must be unique!
-    if self.tokens.contains_key(&token_id){
-        env::panic_str("cannot create, check the metadata of the token!");
+    // if self.tokens.contains_key(&token_id){
+    //     env::panic_str("cannot create, check the metadata of the token!");
+    // }
+    if (tokens.contains(token_id))
+    {
+        contract_throw("cannot create, check the metadata of the token!");
     }
-
+    
     // insert tokens
-    self.tokens.insert(&token_id, &token_metadata);
+    // self.tokens.insert(&token_id, &token_metadata);
+    tokens.insert(token_id, token_metadata);
 
     // insert ownership
-    self.owner_ship.insert(&token_id, &asset_rights);
+    // self.owner_ship.insert(&token_id, &asset_rights);
+    owner_ship.insert(token_id, asset_rights);
 
     // insert assets_own_info
-    let mut owned_tokens = self.assets_own_info.get(&asset_rights.ownership).unwrap_or_else(||{
-        UnorderedSet::new(StorageRecord::AssetsOwnTable {
-            account_hash: env::sha256(asset_rights.ownership.as_bytes()),
-        })
-    });
-    owned_tokens.insert(&token_id);
-    self.assets_own_info.insert(&asset_rights.ownership, &owned_tokens);
+    // let mut owned_tokens = self.assets_own_info.get(&asset_rights.ownership).unwrap_or_else(||{
+    //     UnorderedSet::new(StorageRecord::AssetsOwnTable {
+    //         account_hash: env::sha256(asset_rights.ownership.as_bytes()),
+    //     })
+    // });
+    // owned_tokens.insert(&token_id);
+    // self.assets_own_info.insert(&asset_rights.ownership, &owned_tokens);
+    std::set<std::string> owned_tokens;
+    owned_tokens.insert(token_id);
+    assets_own_info.insert(asset_rights.ownership, owned_tokens);
 
     // insert assets_usage_info
-    let mut usage_tokens = self.assets_usage_info.get(&asset_rights.usage_rights).unwrap_or_else(||{
-        UnorderedSet::new(StorageRecord::AssetsUsageTable{
-            account_hash: env::sha256(asset_rights.usage_rights.as_bytes()),
-        })
-    });
-    usage_tokens.insert(&token_id);
-    self.assets_usage_info.insert(&asset_rights.usage_rights, &usage_tokens);
+    // let mut usage_tokens = self.assets_usage_info.get(&asset_rights.usage_rights).unwrap_or_else(||{
+    //     UnorderedSet::new(StorageRecord::AssetsUsageTable{
+    //         account_hash: env::sha256(asset_rights.usage_rights.as_bytes()),
+    //     })
+    // });
+    // usage_tokens.insert(&token_id);
+    // self.assets_usage_info.insert(&asset_rights.usage_rights, &usage_tokens);
+    std::set<std::string> usage_tokens;
+    usage_tokens.insert(token_id);
+    assets_own_info.insert(asset_rights.ownership, usage_tokens);
 
     // return value
-    nft_666_token::NFT666Token{
-        token_id,
-        owner_id: asset_rights.ownership,
-        usage_rights: asset_rights.usage_rights,
-        metadata: Some(token_metadata),
-    }
+    // nft_666_token::NFT666Token{
+    //     token_id,
+    //     owner_id: asset_rights.ownership,
+    //     usage_rights: asset_rights.usage_rights,
+    //     metadata: Some(token_metadata),
+    // }
+    NFT666Token n666t;
+    n666t.token_id = token_id;
+    n666t.owner_id = asset_rights.ownership;
+    n666t.usage_rights = asset_rights.usage_rights;
+    n666t.metadata.push_back(token_metadata);
+
+    return n666t;
 }

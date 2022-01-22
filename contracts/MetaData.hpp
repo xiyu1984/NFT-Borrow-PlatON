@@ -35,4 +35,36 @@ struct TokenMetaData {
     PLATON_SERIALIZE(TokenMetaData, (title)(description)(media)(media_hash)
     (copies)(issued_at)(expires_at)(starts_at)
     (updated_at)(extra)(reference)(reference_hash))
+
+    std::string to_hex_string()
+    {
+        std::string s;
+
+        if (!title.empty())
+        {
+            s += title[0];
+        }
+        
+        if (!description.empty())
+        {
+            s += description[0];
+        }
+        
+        if (!media.empty())
+        {
+            s += media[0];
+        }
+        
+        if (!extra.empty())
+        {
+            s += extra[0];
+        }
+
+        if (!reference.empty())
+        {
+            s += reference[0];
+        }
+        
+        return s;
+    }
 };
