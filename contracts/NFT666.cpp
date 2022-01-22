@@ -357,34 +357,71 @@ std::string NFT666::tokenURI(const std::string& _tokenId)
 
 void NFT666::transfer_usage_without_check(const std::string& from, const std::string& to, const std::string& token_id)
 {
-    let mut asset_right = self.owner_ship.get(&token_id).expect("token dose not exist!");
+    auto fromAddress = platon::make_address(from);
+    auto toAddress = platon::make_address(to);
+    if ((!fromAddress.second) || (!toAddress.second))
+    {
+        contract_throw("Invalid from or to Address");
+    }
 
-    let mut cur_usage_tokens = self.assets_usage_info.get(&from).expect("There's a bug, because someone has the usage_right, but the asset does not existed in the asset_usage_info table!");
+    if (!owner_ship.contains(token_id))
+    {
+        contract_throw("token dose not exist!");
+    }
+    auto asset_right = &owner_ship[token_id];
+
+    if (!assets_usage_info.contains(fromAddress.first))
+    {
+        contract_throw("There's a bug, because someone has the usage_right, but the asset does not existed in the asset_usage_info table!");
+    }
+    auto cur_usage_tokens = &assets_usage_info[fromAddress.first];
 
     // delete from current usage
-    cur_usage_tokens.remove(&token_id);
-    self.assets_usage_info.insert(&from, &cur_usage_tokens);
+    cur_usage_tokens->erase(token_id);
 
     // add into new usage
-    let mut new_usage_tokens = self.assets_usage_info.get(&to).unwrap_or_else(||{
-        UnorderedSet::new(StorageRecord::AssetsUsageTable{
-            account_hash: env::sha256(to.as_bytes()),
-        })
-    });
-    new_usage_tokens.insert(&token_id);
-    self.assets_usage_info.insert(&to, &new_usage_tokens);
+    assets_usage_info[toAddress.first].insert(token_id);
 
     // change usage_rights
-    asset_right.usage_rights = to;
-    self.owner_ship.insert(&token_id, &asset_right);
+    asset_right->usage_rights = toAddress.first;
 
     // delete from approved
-    self.usage_approvals.remove(&token_id);
+    usage_approvals.erase(token_id);
 }
 
 void NFT666::transfer_ownership_without_check(const std::string& from, const std::string& to, const std::string& token_id)
 {
+    auto fromAddress = platon::make_address(from);
+    auto toAddress = platon::make_address(to);
+    if ((!fromAddress.second) || (!toAddress.second))
+    {
+        contract_throw("Invalid from or to Address");
+    }
+
+    if (!owner_ship.contains(token_id))
+    {
+        contract_throw("token dose not exist!");
+    }
+    auto art = &owner_ship[token_id];
     
+    // update `self.assets_own_info`
+    if (!assets_own_info.contains(fromAddress.first))
+    {
+        contract_throw("There's a bug, because someone has the ownership, but the asset dose not existed in the asset_own_info table!");
+    }
+    auto cur_owned_tokens = &assets_own_info[fromAddress.first];
+    
+    // delete from current owner
+    cur_owned_tokens->erase(token_id);
+
+    // add into new owner
+    assets_own_info[toAddress.first].insert(token_id);
+
+    // update `self.owner_ship`
+    art->ownership = toAddress.first;
+
+    // delete from approved
+    approvals.erase(token_id);
 }
 
 NFT666Token NFT666::mint(AssetRights asset_rights, TokenMetaData token_metadata)
