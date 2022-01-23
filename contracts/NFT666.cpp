@@ -51,6 +51,12 @@ void NFT666::lendUsageTo(const std::string& to, const std::string& token_id, uin
 
     // add leasing record
     leasing_period[token_id] = ::platon_block_number() + period;
+
+    EventTransfer etf;
+    etf.from = art->ownership.toString();
+    etf.to = to;
+    etf.tokenId = token_id;
+    PLATON_EMIT_EVENT1(TransferEvent, "Owner transfer", etf);
 }
 
 void NFT666::usageReturn(const std::string& token_id)
@@ -103,6 +109,12 @@ void NFT666::usageReturn(const std::string& token_id)
 
     // add leasing record
     leasing_period.erase(token_id);
+
+    EventTransfer etf;
+    etf.from = pre_account.toString();
+    etf.to = art->ownership.toString();
+    etf.tokenId = token_id;
+    PLATON_EMIT_EVENT1(TransferEvent, "Usage transfer", etf);
 }
 
 uint64_t NFT666::getLeasingPeriod(const std::string& token_id)
@@ -217,7 +229,7 @@ void NFT666::transferFrom(const std::string& _from, const std::string& _to, cons
     etf.from = _from;
     etf.to = _to;
     etf.tokenId = _tokenId;
-    PLATON_EMIT_EVENT0(TransferEvent, etf);
+    PLATON_EMIT_EVENT1(TransferEvent, "Owner transfer", etf);
 }
 
 void NFT666::approve(const std::string& _approved, const std::string& _tokenId)
